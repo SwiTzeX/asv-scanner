@@ -5,7 +5,7 @@ A multi-threaded security scanner that checks for:
 - SSL/TLS security (certificates, weak ciphers)
 - DNS zone transfers, SMTP open relays, ICMP exposure
 - Web application security (external scripts, ZAP scan)
-- PCI DSS-compliant reporting (JSON + console summary)
+- PCI DSS-compliant reporting (JSON + console summary)s
 
 ---
 
