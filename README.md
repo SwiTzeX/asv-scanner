@@ -5,7 +5,7 @@ A multi-threaded security scanner that checks for:
 - SSL/TLS security (certificates, weak ciphers)
 - DNS zone transfers, SMTP open relays, ICMP exposure
 - Web application security (external scripts, ZAP scan)
-- PCI DSS-compliant reporting (JSON + console summary)s
+- PCI DSS-compliant reporting (JSON + console summary)
 
 ---
 
@@ -21,11 +21,7 @@ pip install -r requirements.txt
 
 ## 🚀 How to Run
 
-```bash
-python3 -m scanner.main
-```
-
-Or, if you're inside the `scanner/` folder:
+Inside the `asv-scanner` folder, run:
 
 ```bash
 python3 main.py
