@@ -110,3 +110,16 @@ def print_summary():
 
     print("\n" + "=" * 60)
 
+    # OS Detection Summary
+    os_info = results_dict.get("OS", {})
+    if os_info:
+        print("\n" + "=" * 60)
+        print("🖥️ Operating System Detection")
+        print("=" * 60)
+        print(f"🧠 Detected OS: {os_info.get('os_name', 'Unknown')} (Accuracy: {os_info.get('accuracy', 'N/A')}%)")
+        print(f"📦 PCI Compliance: {os_info.get('pci_compliant', 'Unknown')}")
+        for note in os_info.get("notes", []):
+            print(f"   - {note}")
+    print("\n" + "=" * 60)
+
+
