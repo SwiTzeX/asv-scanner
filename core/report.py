@@ -1,7 +1,7 @@
 import datetime
 import json
-from scanner.config import REPORT_FILE, SCAN_INTERVAL_DAYS
-from scanner.core.result_manager import results_dict
+from config import REPORT_FILE, SCAN_INTERVAL_DAYS
+from core.result_manager import results_dict
 
 
 def generate_pci_compliant_report():

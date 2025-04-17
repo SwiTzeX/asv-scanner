@@ -3,7 +3,7 @@ import dns.zone
 import dns.query
 import smtplib
 import subprocess
-from scanner.core.result_manager import results_dict, lock
+from core.result_manager import results_dict, lock
 
 
 def check_dns_zone_transfer(target):

@@ -1,8 +1,8 @@
-from scanner.config import API_URL
-from scanner.utils.tls_scanner import scan_ssl_tls
-from scanner.utils.cve_api import query_cve_api
-from scanner.utils.tls_scanner import determine_severity
-from scanner.core.result_manager import results_dict, lock
+from config import API_URL
+from utils.tls_scanner import scan_ssl_tls
+from utils.cve_api import query_cve_api
+from utils.tls_scanner import determine_severity
+from core.result_manager import results_dict, lock
 import nmap3
 import requests
 

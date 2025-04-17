@@ -1,7 +1,7 @@
 import requests
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-from scanner.core.result_manager import results_dict, lock
+from core.result_manager import results_dict, lock
 
 def is_external_script(script_url, base_domain):
     try:

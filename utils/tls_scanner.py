@@ -1,7 +1,7 @@
 import ssl
 import socket
 import datetime
-from scanner.core.result_manager import results_dict
+from core.result_manager import results_dict
 
 # List of weak ciphers
 weak_ciphers = ["RC4", "DES", "3DES", "MD5", "SHA1"]

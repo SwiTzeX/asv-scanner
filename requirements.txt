@@ -1,6 +1,6 @@
 requests
 beautifulsoup4
-python-nmap
+python3-nmap
 dnspython
 python-owasp-zap-v2.4
 

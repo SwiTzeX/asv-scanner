@@ -1,12 +1,16 @@
 import threading
-from scanner.config import PORT_RANGES
-from scanner.core.port_scanner import pci_scan_range
-from scanner.core.result_manager import results_dict
-from scanner.core.report import generate_pci_compliant_report, print_summary
-from scanner.utils.passive_web import passive_web_analysis
-from scanner.utils.dns_smtp_icmp import run_nsc_checks
+from config import PORT_RANGES
+from core.port_scanner import pci_scan_range
+from core.result_manager import results_dict
+from core.report import generate_pci_compliant_report, print_summary
+from utils.passive_web import passive_web_analysis
+from utils.dns_smtp_icmp import run_nsc_checks
 # Optional: Enable if you want active ZAP scanning
 # from scanner.utils.zap_scanner import active_web_scan
+
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 
 def run_parallel_scans(target):

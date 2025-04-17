@@ -1,7 +1,7 @@
 from zapv2 import ZAPv2
 import time
-from scanner.core.result_manager import results_dict, lock
-from scanner.config import ZAP_PROXY
+from core.result_manager import results_dict, lock
+from config import ZAP_PROXY
 
 def scan_with_zap(target_url):
     zap = ZAPv2(proxies={"http": ZAP_PROXY, "https": ZAP_PROXY})

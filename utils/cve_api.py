@@ -1,5 +1,5 @@
 import requests
-from scanner.config import API_URL
+from config import API_URL
 
 def query_cve_api(product, version):
     try:
