@@ -24,7 +24,7 @@ def generate_pci_compliant_report():
 
 def print_summary():
     """Print scan results summary with CVEs, TLS info, web security, and NSC checks"""
-    from scanner.core.result_manager import results_dict
+    from core.result_manager import results_dict
 
     print("\n" + "=" * 60)
     print("🚨 PCI DSS Scan Results - Summary 🚨")
