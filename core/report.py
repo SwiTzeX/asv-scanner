@@ -153,7 +153,7 @@ _HTML_TEMPLATE = """
     <div class="key-findings">
       <div class="box">
         <strong>High & Medium CVEs:</strong>
-        {{ len(get_medium_and_high_cves(results_dict)) }} issues
+        {{ mh_cves }} issues
       </div>
       <div class="box">
         <strong>TLS Compliance:</strong>
@@ -227,7 +227,9 @@ def generate_pdf_report(scan: dict, filename: str = "executive_summary.pdf") -> 
     """
     Render HTML → PDF via WeasyPrint.
     """
+    mh_cves = get_medium_and_high_cves(scan["scanned_software"])
+    mh_count = len(mh_cves)
     template = Template(_HTML_TEMPLATE)
-    html_out = template.render(scan=scan)
+    html_out = template.render(scan=scan, mh_cves=mh_cves)
     HTML(string=html_out).write_pdf(filename)
     print(f"✅ PDF report generated: {filename}")
