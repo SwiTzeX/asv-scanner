@@ -184,6 +184,14 @@ _HTML_TEMPLATE = """
         {% else %}
           <p>No vulnerabilities found.</p>
         {% endif %}
+        {% if details["notes"] %}
+        <p><strong>Special Notes:</strong></p>
+        <ul class=\"notes\">
+          {% for note in details["notes"] %}
+          <li>{{ note }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
       {% endif %}
     {% endfor %}
   </div>
@@ -212,8 +220,7 @@ _HTML_TEMPLATE = """
   </div>
   <div class=\"section\">
     <h2>Operating System Findings</h2>
-    <p><strong>Detected OS:</strong> {{ scan['OS']["os_name"] }}
-       (Accuracy: {{ scan['OS']["accuracy"] }}%)</p>
+    <p><strong>Detected OS:</strong> {{ scan['OS']["os_name"] }} (Accuracy: {{ scan['OS']["accuracy"] }}%)</p>
     <p><strong>Compliance:</strong> {{ scan['OS']["pci_compliant"] }}</p>
   </div>
   {% if scan["scan_summary"].get("notes") %}
@@ -237,7 +244,6 @@ def generate_pdf_report(scan: dict, filename: str = "executive_summary.pdf") -> 
     """
     Render HTML → PDF via WeasyPrint.
     """
-    # compute medium+high CVE count
     mh_count = len(get_medium_and_high_cves(scan["scanned_software"]))
 
     template = Template(_HTML_TEMPLATE)
