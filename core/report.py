@@ -118,9 +118,9 @@ def print_summary():
 # HTML template for styled executive-summary report
 _HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-  <meta charset=\"UTF-8\">
+  <meta charset="UTF-8">
   <title>PCI DSS Executive Summary</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 1cm; }
@@ -136,7 +136,7 @@ _HTML_TEMPLATE = """
     table, th, td { border: 1px solid #999; }
     th { background: #eee; padding: 6px; text-align: left; }
     td { padding: 6px; vertical-align: top; }
-    ul.notes { margin-top: 10px; }
+    ul.notes { margin-top: 10px; padding-left: 20px; }
     ul.notes li { margin-bottom: 5px; }
     footer { text-align: center; font-size: 0.9em; color: #666; margin-top: 40px; }
   </style>
@@ -145,26 +145,24 @@ _HTML_TEMPLATE = """
   <header>
     <h1>PCI DSS Executive Summary</h1>
   </header>
-  <div class=\"metadata\">
+  <div class="metadata">
     <div><strong>Scan Date:</strong> {{ scan["scan_metadata"]["date"] }}</div>
-    <div><strong>Overall Status:</strong>
-      {% if scan["scan_metadata"]["pci_compliant"] %}✅ PASS{% else %}❌ FAIL{% endif %}
-    </div>
+    <div><strong>Overall Status:</strong> {% if scan["scan_metadata"]["pci_compliant"] %}✅ PASS{% else %}❌ FAIL{% endif %}</div>
   </div>
-  <div class=\"section\">
+
+  <div class="section">
     <h2>Key Findings</h2>
-    <div class=\"key-findings\">
-      <div class=\"box\">
-        <strong>High & Medium CVEs:</strong>
-        {{ medium_high_count }} issues
+    <div class="key-findings">
+      <div class="box">
+        <strong>High & Medium CVEs:</strong> {{ medium_high_count }} issues
       </div>
-      <div class=\"box\">
-        <strong>TLS Compliance:</strong>
-        {{ scan["TLS Scan"]["pci_compliant"] }}
+      <div class="box">
+        <strong>TLS Compliance:</strong> {{ scan["TLS Scan"]["pci_compliant"] }}
       </div>
     </div>
   </div>
-  <div class=\"section\">
+
+  <div class="section">
     <h2>Detected Software & Vulnerabilities</h2>
     {% for sw, details in scan["scanned_software"].items() %}
       {% if sw not in ['scan_summary','TLS Scan','NSC Checks','Web Security','OS'] %}
@@ -185,17 +183,18 @@ _HTML_TEMPLATE = """
           <p>No vulnerabilities found.</p>
         {% endif %}
         {% if details["notes"] %}
-        <p><strong>Special Notes:</strong></p>
-        <ul class=\"notes\">
-          {% for note in details["notes"] %}
-          <li>{{ note }}</li>
-          {% endfor %}
-        </ul>
+          <p><strong>Special Notes:</strong></p>
+          <ul class="notes">
+            {% for note in details["notes"] %}
+              <li>{{ note }}</li>
+            {% endfor %}
+          </ul>
         {% endif %}
       {% endif %}
     {% endfor %}
   </div>
-  <div class=\"section\">
+
+  <div class="section">
     <h2>TLS / SSL Findings</h2>
     <table>
       <tr><th>Target</th><td>{{ scan["TLS Scan"]["target"] }}</td></tr>
@@ -205,7 +204,8 @@ _HTML_TEMPLATE = """
       <tr><th>Compliance</th><td>{{ scan["TLS Scan"]["pci_compliant"] }}</td></tr>
     </table>
   </div>
-  <div class=\"section\">
+
+  <div class="section">
     <h2>Network Security Controls (NSC)</h2>
     <table>
       <tr><th>DNS Zone Transfer</th><td>{{ scan['NSC Checks']["dns_zone_transfer"] }}</td></tr>
@@ -213,26 +213,47 @@ _HTML_TEMPLATE = """
       <tr><th>ICMP Exposure</th><td>{{ scan['NSC Checks']["icmp_firewall_exposed"] }}</td></tr>
     </table>
   </div>
-  <div class=\"section\">
+
+  <div class="section">
     <h2>Web Application Findings</h2>
     <p><strong>PCI Risk:</strong> {{ scan['Web Security']["risk_level"] }}</p>
     <p><strong>Compliance:</strong> {{ scan['Web Security']["pci_compliant"] }}</p>
+    {% set vulns = scan['Web Security']["vulnerabilities"] %}
+    {% if vulns %}
+      <h3>Detected ZAP Vulnerabilities</h3>
+      <table>
+        <tr><th>Risk</th><th>Name</th><th>Description</th><th>Solution</th></tr>
+        {% for v in vulns %}
+        <tr>
+          <td>{{ v.risk }}</td>
+          <td>{{ v.name }}</td>
+          <td>{{ v.description[:60] }}…</td>
+          <td>{{ v.solution[:60] }}…</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p>No ZAP vulnerabilities identified.</p>
+    {% endif %}
   </div>
-  <div class=\"section\">
+
+  <div class="section">
     <h2>Operating System Findings</h2>
     <p><strong>Detected OS:</strong> {{ scan['OS']["os_name"] }} (Accuracy: {{ scan['OS']["accuracy"] }}%)</p>
     <p><strong>Compliance:</strong> {{ scan['OS']["pci_compliant"] }}</p>
   </div>
+
   {% if scan["scan_summary"].get("notes") %}
-  <div class=\"section\">
+  <div class="section">
     <h2>Scan Notes</h2>
-    <ul class=\"notes\">
+    <ul class="notes">
       {% for note in scan["scan_summary"]["notes"] %}
       <li>{{ note }}</li>
       {% endfor %}
     </ul>
   </div>
   {% endif %}
+
   <footer>
     Generated on {{ scan["scan_metadata"]["date"] }} by ASV Scanner
   </footer>
