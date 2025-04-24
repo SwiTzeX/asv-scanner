@@ -39,8 +39,9 @@ def active_web_scan(target):
     zap_results = scan_with_zap(f"http://{target}")
 
     with lock:
-        results_dict["Web Security"] = {
-            "vulnerabilities": zap_results
-        }
+        # Ensure we don’t wipe out passive-scan data
+        websec = results_dict.setdefault("Web Security", {})
+        # Append/replace just the vulnerabilities key
+        websec["vulnerabilities"] = zap_results
 
     print(f"✅ ZAP scan finished: {len(zap_results)} issue(s) found.")
