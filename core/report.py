@@ -5,6 +5,7 @@ from core.result_manager import results_dict
 from utils.vuln_utils import get_medium_and_high_cves
 from weasyprint import HTML
 from jinja2 import Template
+from utils.vuln_utils import get_medium_and_high_cves
 
 def generate_pci_compliant_report():
     report = {
@@ -237,7 +238,6 @@ def generate_pdf_report(scan: dict, filename: str = "executive_summary.pdf") -> 
     Render HTML → PDF via WeasyPrint.
     """
     # compute medium+high CVE count
-    from utils.cve_utils import get_medium_high_cves
     mh_count = len(get_medium_high_cves(scan["scanned_software"]))
 
     template = Template(_HTML_TEMPLATE)
