@@ -37,10 +37,10 @@ def run_parallel_scans(target):
     threads.append(t1)
     t1.start()
 
-    # Optionally: OWASP ZAP scan
-    # t2 = threading.Thread(target=active_web_scan, args=(target,))
-    # threads.append(t2)
-    # t2.start()
+    # OWASP ZAP scan
+    t2 = threading.Thread(target=active_web_scan, args=(target,))
+    threads.append(t2)
+    t2.start()
 
     # NSC checks
     t3 = threading.Thread(target=run_nsc_checks, args=(target,))
