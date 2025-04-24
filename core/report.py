@@ -238,7 +238,7 @@ def generate_pdf_report(scan: dict, filename: str = "executive_summary.pdf") -> 
     Render HTML → PDF via WeasyPrint.
     """
     # compute medium+high CVE count
-    mh_count = len(get_medium_high_cves(scan["scanned_software"]))
+    mh_count = len(get_medium_and_high_cves(scan["scanned_software"]))
 
     template = Template(_HTML_TEMPLATE)
     html_out = template.render(
