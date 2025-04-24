@@ -1,15 +1,17 @@
 import threading
-from config import PORT_RANGES
+from config import PORT_RANGES, REPORT_FILE
 from core.port_scanner import pci_scan_range
 from core.result_manager import results_dict
-from core.report import generate_pci_compliant_report, print_summary
+from core.report import generate_pci_compliant_report, print_summary, generate_pdf_report
 from utils.passive_web import passive_web_analysis
 from utils.dns_smtp_icmp import run_nsc_checks
+import json
 # Optional: Enable if you want active ZAP scanning
 # from scanner.utils.zap_scanner import active_web_scan
 
 import sys
 import os
+
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 
@@ -53,9 +55,9 @@ def run_parallel_scans(target):
     # Interference detection logic
     summary = results_dict["scan_summary"]
     if (
-        summary["total_ports_detected"] < 3 or
-        summary["nmap_scan_failures"] > 0 or
-        summary["tls_failures"] > 0
+            summary["total_ports_detected"] < 3 or
+            summary["nmap_scan_failures"] > 0 or
+            summary["tls_failures"] > 0
     ):
         summary["scan_interference_detected"] = True
         summary["notes"].append(
@@ -64,9 +66,26 @@ def run_parallel_scans(target):
 
     generate_pci_compliant_report()
     print_summary()
+    with open(REPORT_FILE) as f:
+        full_report = json.load(f)
+
+    # Promote nested sections into top level so the template can see them
+    ss = full_report["scanned_software"]
+    full_report["scan_summary"] = ss.get("scan_summary", {})
+    full_report["TLS Scan"] = ss.get("TLS Scan", {})
+    full_report["NSC Checks"] = ss.get("NSC Checks", {})
+    full_report["Web Security"] = ss.get("Web Security", {})
+    full_report["OS"] = ss.get("OS", {})
+    # remove them from the scanned_software block so you don’t repeat them
+    for k in ["scan_summary", "TLS Scan", "NSC Checks", "Web Security", "OS"]:
+        ss.pop(k, None)
+
+    # Now render the HTML → PDF
+    generate_pdf_report(full_report)
 
 
 if __name__ == "__main__":
     target = input("Enter Target IP or Domain: ")
     print(f"\n🚀 Starting PCI DSS-compliant scan on {target}...\n")
     run_parallel_scans(target)
+

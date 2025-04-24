@@ -2,7 +2,8 @@ import datetime
 import json
 from config import REPORT_FILE, SCAN_INTERVAL_DAYS
 from core.result_manager import results_dict
-
+from weasyprint import HTML
+from jinja2 import Template
 
 def generate_pci_compliant_report():
     report = {
@@ -110,16 +111,122 @@ def print_summary():
 
     print("\n" + "=" * 60)
 
-    # OS Detection Summary
-    os_info = results_dict.get("OS", {})
-    if os_info:
-        print("\n" + "=" * 60)
-        print("🖥️ Operating System Detection")
-        print("=" * 60)
-        print(f"🧠 Detected OS: {os_info.get('os_name', 'Unknown')} (Accuracy: {os_info.get('accuracy', 'N/A')}%)")
-        print(f"📦 PCI Compliance: {os_info.get('pci_compliant', 'Unknown')}")
-        for note in os_info.get("notes", []):
-            print(f"   - {note}")
-    print("\n" + "=" * 60)
 
 
+# HTML template for styled executive-summary report
+_HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PCI DSS Executive Summary</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 1cm; }
+    header { background: #003366; color: white; padding: 20px; text-align: center; }
+    h1 { margin: 0; }
+    .metadata { margin: 20px 0; }
+    .metadata div { margin-bottom: 5px; }
+    .section { margin-top: 30px; }
+    .section h2 { border-bottom: 2px solid #003366; padding-bottom: 5px; color: #003366; }
+    .key-findings { display: flex; gap: 10px; margin: 20px 0; }
+    .key-findings .box { background: #f2f2f2; padding: 15px; flex: 1; border: 1px solid #ccc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table, th, td { border: 1px solid #999; }
+    th { background: #eee; padding: 6px; text-align: left; }
+    td { padding: 6px; vertical-align: top; }
+    footer { text-align: center; font-size: 0.9em; color: #666; margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PCI DSS Executive Summary</h1>
+  </header>
+  <div class="metadata">
+    <div><strong>Scan Date:</strong> {{ scan["scan_metadata"]["date"] }}</div>
+    <div><strong>Overall Status:</strong>
+      {% if scan["scan_metadata"]["pci_compliant"] %}✅ PASS{% else %}❌ FAIL{% endif %}
+    </div>
+  </div>
+  <div class="section">
+    <h2>Key Findings</h2>
+    <div class="key-findings">
+      <div class="box">
+        <strong>High & Medium CVEs:</strong>
+        {{ scan["scan_summary"]["total_ports_detected"] }} issues
+      </div>
+      <div class="box">
+        <strong>TLS Compliance:</strong>
+        {{ scan["TLS Scan"]["pci_compliant"] }}
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <h2>Detected Software & Vulnerabilities</h2>
+    {% for sw, details in scan["scanned_software"].items() %}
+      {% if sw not in ['scan_summary','TLS Scan','NSC Checks','Web Security','OS'] %}
+        <h3>{{ sw }} ({{ details["ports"] | join(', ') }})</h3>
+        {% if details["cves"] %}
+          <table>
+            <tr><th>CVE</th><th>CVSS</th><th>Severity</th><th>Description</th></tr>
+            {% for c in details["cves"] %}
+            <tr>
+              <td>{{ c["cve_id"] }}</td>
+              <td>{{ c["cvss_score"] }}</td>
+              <td>{{ c["severity"] }}</td>
+              <td>{{ c["description"][:80] }}…</td>
+            </tr>
+            {% endfor %}
+          </table>
+        {% else %}
+          <p>No vulnerabilities found.</p>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  </div>
+  <div class="section">
+    <h2>TLS / SSL Findings</h2>
+    <table>
+      <tr><th>Target</th><td>{{ scan["TLS Scan"]["target"] }}</td></tr>
+      <tr><th>Cipher</th><td>{{ scan["TLS Scan"]["cipher"] }}</td></tr>
+      <tr><th>TLS Version</th><td>{{ scan["TLS Scan"]["tls_version"] }}</td></tr>
+      <tr><th>Expiry</th><td>{{ scan["TLS Scan"]["certificate_expiry"] }}</td></tr>
+      <tr><th>Compliance</th><td>{{ scan["TLS Scan"]["pci_compliant"] }}</td></tr>
+    </table>
+  </div>
+  <div class="section">
+    <h2>Network Security Controls (NSC)</h2>
+    <table>
+      <tr><th>DNS Zone Transfer</th>
+          <td>{{ scan["NSC Checks"]["dns_zone_transfer"] }}</td></tr>
+      <tr><th>SMTP Relay</th>
+          <td>{{ scan["NSC Checks"]["smtp_open_relay"] }}</td></tr>
+      <tr><th>ICMP Exposure</th>
+          <td>{{ scan["NSC Checks"]["icmp_firewall_exposed"] }}</td></tr>
+    </table>
+  </div>
+  <div class="section">
+    <h2>Web Application Findings</h2>
+    <p><strong>PCI Risk:</strong> {{ scan["Web Security"]["risk_level"] }}</p>
+    <p><strong>Compliance:</strong> {{ scan["Web Security"]["pci_compliant"] }}</p>
+  </div>
+  <div class="section">
+    <h2>Operating System Findings</h2>
+    <p><strong>Detected OS:</strong> {{ scan["OS"]["os_name"] }}
+       (Accuracy: {{ scan["OS"]["accuracy"] }}%)</p>
+    <p><strong>Compliance:</strong> {{ scan["OS"]["pci_compliant"] }}</p>
+  </div>
+  <footer>
+    Generated on {{ scan["scan_metadata"]["date"] }} by ASV Scanner
+  </footer>
+</body>
+</html>
+"""
+
+def generate_pdf_report(scan: dict, filename: str = "executive_summary.pdf") -> None:
+    """
+    Render HTML → PDF via WeasyPrint.
+    """
+    template = Template(_HTML_TEMPLATE)
+    html_out = template.render(scan=scan)
+    HTML(string=html_out).write_pdf(filename)
+    print(f"✅ PDF report generated: {filename}")

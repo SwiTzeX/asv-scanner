@@ -6,18 +6,6 @@ from core.result_manager import results_dict
 # List of weak ciphers
 weak_ciphers = ["RC4", "DES", "3DES", "MD5", "SHA1"]
 
-def determine_severity(cvss_score):
-    try:
-        cvss_score = float(cvss_score)
-    except ValueError:
-        return "Unknown"
-
-    if cvss_score >= 7.0:
-        return "High"
-    elif 4.0 <= cvss_score < 7.0:
-        return "Medium"
-    else:
-        return "Low"
 
 
 def scan_ssl_tls(target, port):
