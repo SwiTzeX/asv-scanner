@@ -6,9 +6,7 @@ from core.report import generate_pci_compliant_report, print_summary, generate_p
 from utils.passive_web import passive_web_analysis
 from utils.dns_smtp_icmp import run_nsc_checks
 import json
-# Optional: Enable if you want active ZAP scanning
-# from scanner.utils.zap_scanner import active_web_scan
-
+from utils.zap_scanner import active_web_scan
 import sys
 import os
 

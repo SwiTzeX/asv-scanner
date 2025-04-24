@@ -2,6 +2,7 @@ import datetime
 import json
 from config import REPORT_FILE, SCAN_INTERVAL_DAYS
 from core.result_manager import results_dict
+from utils.vuln_utils import get_medium_and_high_cves
 from weasyprint import HTML
 from jinja2 import Template
 
@@ -152,7 +153,7 @@ _HTML_TEMPLATE = """
     <div class="key-findings">
       <div class="box">
         <strong>High & Medium CVEs:</strong>
-        {{ scan["scan_summary"]["total_ports_detected"] }} issues
+        {{ len(get_medium_and_high_cves(results_dict)) }} issues
       </div>
       <div class="box">
         <strong>TLS Compliance:</strong>
