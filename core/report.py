@@ -136,7 +136,7 @@ _HTML_TEMPLATE = """
     table, th, td { border: 1px solid #999; }
     th { background: #eee; padding: 6px; text-align: left; }
     td { padding: 6px; vertical-align: top; }
-    ul.notes { margin-top: 10px; padding-left: 20px; }
+    ul.notes { margin-top: 10px; }
     ul.notes li { margin-bottom: 5px; }
     footer { text-align: center; font-size: 0.9em; color: #666; margin-top: 40px; }
   </style>
@@ -147,21 +147,24 @@ _HTML_TEMPLATE = """
   </header>
   <div class="metadata">
     <div><strong>Scan Date:</strong> {{ scan["scan_metadata"]["date"] }}</div>
-    <div><strong>Overall Status:</strong> {% if scan["scan_metadata"]["pci_compliant"] %}✅ PASS{% else %}❌ FAIL{% endif %}</div>
+    <div><strong>Target:</strong> {{ target }}</div>
+    <div><strong>Overall Status:</strong>
+      {% if scan["scan_metadata"]["pci_compliant"] %}✅ PASS{% else %}❌ FAIL{% endif %}
+    </div>
   </div>
-
   <div class="section">
     <h2>Key Findings</h2>
     <div class="key-findings">
       <div class="box">
-        <strong>High & Medium CVEs:</strong> {{ medium_high_count }} issues
+        <strong>High & Medium CVEs:</strong>
+        {{ medium_high_count }} issues
       </div>
       <div class="box">
-        <strong>TLS Compliance:</strong> {{ scan["TLS Scan"]["pci_compliant"] }}
+        <strong>TLS Compliance:</strong>
+        {{ scan["TLS Scan"]["pci_compliant"] }}
       </div>
     </div>
   </div>
-
   <div class="section">
     <h2>Detected Software & Vulnerabilities</h2>
     {% for sw, details in scan["scanned_software"].items() %}
@@ -183,17 +186,16 @@ _HTML_TEMPLATE = """
           <p>No vulnerabilities found.</p>
         {% endif %}
         {% if details["notes"] %}
-          <p><strong>Special Notes:</strong></p>
-          <ul class="notes">
-            {% for note in details["notes"] %}
-              <li>{{ note }}</li>
-            {% endfor %}
-          </ul>
+        <p><strong>Special Notes:</strong></p>
+        <ul class="notes">
+          {% for note in details["notes"] %}
+          <li>{{ note }}</li>
+          {% endfor %}
+        </ul>
         {% endif %}
       {% endif %}
     {% endfor %}
   </div>
-
   <div class="section">
     <h2>TLS / SSL Findings</h2>
     <table>
@@ -204,7 +206,6 @@ _HTML_TEMPLATE = """
       <tr><th>Compliance</th><td>{{ scan["TLS Scan"]["pci_compliant"] }}</td></tr>
     </table>
   </div>
-
   <div class="section">
     <h2>Network Security Controls (NSC)</h2>
     <table>
@@ -213,7 +214,6 @@ _HTML_TEMPLATE = """
       <tr><th>ICMP Exposure</th><td>{{ scan['NSC Checks']["icmp_firewall_exposed"] }}</td></tr>
     </table>
   </div>
-
   <div class="section">
     <h2>Web Application Findings</h2>
     <p><strong>PCI Risk:</strong> {{ scan['Web Security']["risk_level"] }}</p>
@@ -225,10 +225,10 @@ _HTML_TEMPLATE = """
         <tr><th>Risk</th><th>Name</th><th>Description</th><th>Solution</th></tr>
         {% for v in vulns %}
         <tr>
-          <td>{{ v.risk }}</td>
-          <td>{{ v.name }}</td>
-          <td>{{ v.description[:60] }}…</td>
-          <td>{{ v.solution[:60] }}…</td>
+          <td>{{ v['risk'] }}</td>
+          <td>{{ v['name'] }}</td>
+          <td>{{ v['description'][:60] }}…</td>
+          <td>{{ v['solution'][:60] }}…</td>
         </tr>
         {% endfor %}
       </table>
@@ -236,13 +236,11 @@ _HTML_TEMPLATE = """
       <p>No ZAP vulnerabilities identified.</p>
     {% endif %}
   </div>
-
   <div class="section">
     <h2>Operating System Findings</h2>
     <p><strong>Detected OS:</strong> {{ scan['OS']["os_name"] }} (Accuracy: {{ scan['OS']["accuracy"] }}%)</p>
     <p><strong>Compliance:</strong> {{ scan['OS']["pci_compliant"] }}</p>
   </div>
-
   {% if scan["scan_summary"].get("notes") %}
   <div class="section">
     <h2>Scan Notes</h2>
@@ -253,9 +251,8 @@ _HTML_TEMPLATE = """
     </ul>
   </div>
   {% endif %}
-
   <footer>
-    Generated on {{ scan["scan_metadata"]["date"] }} by ASV Scanner
+    Generated on {{ scan["scan_metadata"]["date"] }} for {{ target }} by ASV Scanner
   </footer>
 </body>
 </html>
@@ -265,12 +262,16 @@ def generate_pdf_report(scan: dict, filename: str = "executive_summary.pdf") -> 
     """
     Render HTML → PDF via WeasyPrint.
     """
+    # compute medium+high CVE count
     mh_count = len(get_medium_and_high_cves(scan["scanned_software"]))
+    # extract target from TLS Scan if available
+    target = scan.get("TLS Scan", {}).get("target", "Unknown")
 
     template = Template(_HTML_TEMPLATE)
     html_out = template.render(
         scan=scan,
-        medium_high_count=mh_count
+        medium_high_count=mh_count,
+        target=target
     )
     HTML(string=html_out).write_pdf(filename)
     print(f"✅ PDF report generated: {filename}")
