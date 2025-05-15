@@ -45,7 +45,7 @@ def run_parallel_scans(target):
         threads.append(t2)
         t2.start()
     else:
-        print("ℹ️  Skipping OWASP ZAP scan (enable with --zap)")
+        print("ℹ️  Skipping OWASP ZAP active scan (enable with --activescan)")
 
     # NSC checks
     t3 = threading.Thread(target=run_nsc_checks, args=(target,))
