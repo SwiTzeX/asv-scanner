@@ -7,6 +7,14 @@ def scan_with_zap(target_url):
     zap = ZAPv2(proxies={"http": ZAP_PROXY, "https": ZAP_PROXY})
     print(f"🔍 Starting OWASP ZAP scan on {target_url}...")
 
+    # ——— SPEED TWEAKS ———
+    # Increase spider threads (default is 2)
+    zap.spider.set_option_thread_count(4)
+    zap.spider.set_option_max_depth(5)        # crawl a bit deeper if needed
+    zap.ascan.set_option_thread_per_host(4)
+    zap.ascan.set_option_max_scans_in_ui(4)   # allow up to 4 concurrent scans in the UI
+    zap.ascan.set_option_delay_in_ms(0)       # no delay between request batches
+
     scan_id = zap.spider.scan(target_url)
     while int(zap.spider.status(scan_id)) < 100:
         time.sleep(2)
