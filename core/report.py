@@ -147,7 +147,7 @@ _HTML_TEMPLATE = """
   </header>
   <div class="metadata">
     <div><strong>Scan Date:</strong> {{ scan["scan_metadata"]["date"] }}</div>
-    <div><strong>Target:</strong> {{ target }}</div>
+    <div><strong>Target:</strong> {{ scan.get('TLS Scan', {}).get('target', 'N/A') }}</div>
     <div><strong>Overall Status:</strong>
       {% if scan["scan_metadata"]["pci_compliant"] %}✅ PASS{% else %}❌ FAIL{% endif %}
     </div>
@@ -161,7 +161,7 @@ _HTML_TEMPLATE = """
       </div>
       <div class="box">
         <strong>TLS Compliance:</strong>
-        {{ scan["TLS Scan"]["pci_compliant"] }}
+        {{ scan.get('TLS Scan', {}).get('pci_compliant', 'Unknown') }}
       </div>
     </div>
   </div>
@@ -169,11 +169,11 @@ _HTML_TEMPLATE = """
     <h2>Detected Software & Vulnerabilities</h2>
     {% for sw, details in scan["scanned_software"].items() %}
       {% if sw not in ['scan_summary','TLS Scan','NSC Checks','Web Security','OS'] %}
-        <h3>{{ sw }} ({{ details["ports"] | join(', ') }})</h3>
-        {% if details["cves"] %}
+        <h3>{{ sw }} ({{ details.get("ports",[])|join(', ') }})</h3>
+        {% if details.get("cves") %}
           <table>
             <tr><th>CVE</th><th>CVSS</th><th>Severity</th><th>Description</th></tr>
-            {% for c in details["cves"] %}
+            {% for c in details.get("cves",[]) %}
             <tr>
               <td>{{ c["cve_id"] }}</td>
               <td>{{ c["cvss_score"] }}</td>
@@ -185,10 +185,10 @@ _HTML_TEMPLATE = """
         {% else %}
           <p>No vulnerabilities found.</p>
         {% endif %}
-        {% if details["notes"] %}
+        {% if details.get("notes") %}
         <p><strong>Special Notes:</strong></p>
         <ul class="notes">
-          {% for note in details["notes"] %}
+          {% for note in details.get("notes",[]) %}
           <li>{{ note }}</li>
           {% endfor %}
         </ul>
@@ -218,28 +218,19 @@ _HTML_TEMPLATE = """
     <h2>Web Application Findings</h2>
     <p><strong>PCI Risk:</strong> {{ scan['Web Security']["risk_level"] }}</p>
     <p><strong>Compliance:</strong> {{ scan['Web Security']["pci_compliant"] }}</p>
-    {% set vulns = scan['Web Security']["vulnerabilities"] %}
-    {% if vulns %}
-      <h3>Detected ZAP Vulnerabilities</h3>
+    {% set zap_vulns = scan['Web Security']["vulnerabilities"] %}
+    {% if zap_vulns %}
       <table>
         <tr><th>Risk</th><th>Name</th><th>Description</th><th>Solution</th></tr>
-        {% for v in vulns %}
+        {% for v in zap_vulns %}
         <tr>
-          <td>{{ v['risk'] }}</td>
-          <td>{{ v['name'] }}</td>
-          <td>{{ v['description'][:60] }}…</td>
-          <td>{{ v['solution'][:60] }}…</td>
+          <td>{{ v.risk }}</td><td>{{ v.name }}</td><td>{{ v.description[:60] }}…</td><td>{{ v.solution[:60] }}…</td>
         </tr>
         {% endfor %}
       </table>
     {% else %}
       <p>No ZAP vulnerabilities identified.</p>
     {% endif %}
-  </div>
-  <div class="section">
-    <h2>Operating System Findings</h2>
-    <p><strong>Detected OS:</strong> {{ scan['OS']["os_name"] }} (Accuracy: {{ scan['OS']["accuracy"] }}%)</p>
-    <p><strong>Compliance:</strong> {{ scan['OS']["pci_compliant"] }}</p>
   </div>
   {% if scan["scan_summary"].get("notes") %}
   <div class="section">
@@ -252,7 +243,7 @@ _HTML_TEMPLATE = """
   </div>
   {% endif %}
   <footer>
-    Generated on {{ scan["scan_metadata"]["date"] }} for {{ target }} by ASV Scanner
+    Generated on {{ scan["scan_metadata"]["date"] }} by ASV Scanner
   </footer>
 </body>
 </html>
@@ -262,17 +253,18 @@ def generate_pdf_report(scan: dict, filename: str = "executive_summary.pdf") -> 
     """
     Render HTML → PDF via WeasyPrint.
     """
-    # compute medium+high CVE count
-    mh_count = len(get_medium_and_high_cves(scan["scanned_software"]))
-    # extract target from TLS Scan if available
-    target = scan.get("TLS Scan", {}).get("target", "Unknown")
+    # compute medium+high CVE count across Nmap + ZAP
+    nmap_mh = len(get_medium_and_high_cves(scan.get("scanned_software", {})))
+    zap_mh = sum(1 for v in scan.get("Web Security", {}).get("vulnerabilities", []) if v.get("risk") in ("High","Medium"))
+    mh_count = nmap_mh + zap_mh
 
     template = Template(_HTML_TEMPLATE)
     html_out = template.render(
         scan=scan,
-        medium_high_count=mh_count,
-        target=target
+        medium_high_count=mh_count
     )
     HTML(string=html_out).write_pdf(filename)
     print(f"✅ PDF report generated: {filename}")
+
+
 
