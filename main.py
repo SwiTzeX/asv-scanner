@@ -34,18 +34,18 @@ def run_parallel_scans(target):
         t.start()
 
     # Passive web analysis
-    t1 = threading.Thread(target=passive_web_analysis, args=(target,))
+    t1 = threading.Thread(target=passive_web_analysis, args=(target,True if "--proxy" in sys.argv else False,))
     threads.append(t1)
     t1.start()
 
     # OWASP ZAP scan (optional)
     if "--activescan" in sys.argv:
         print(f"📡 Running OWASP ZAP scan on {target}…")
-        t2 = threading.Thread(target=active_web_scan, args=(target,))
+        t2 = threading.Thread(target=active_web_scan, args=(target,True if "--proxy" in sys.argv else False,))
         threads.append(t2)
         t2.start()
     else:
-        print("ℹ️  Skipping OWASP ZAP active scan (enable with --activescan)")
+        print("ℹ️  Skipping OWASP ZAP scan (enable with --zap)")
 
     # NSC checks
     t3 = threading.Thread(target=run_nsc_checks, args=(target,))

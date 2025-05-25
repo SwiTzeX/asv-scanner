@@ -18,8 +18,24 @@ def generate_pci_compliant_report():
                 for details in results_dict.values()
             )
         },
-        "scanned_software": results_dict
+        "scanned_software": results_dict.copy()
     }
+
+    # Deduplicate any repeated ZAP findings in Web Security
+    websec = report["scanned_software"].get("Web Security", {})
+    vulns = websec.get("vulnerabilities", [])
+    seen = set()
+    deduped = []
+    for v in vulns:
+        # key by name, risk, cwe_id, wasc_id (or just v["name"] if you prefer)
+        key = (v.get("name"), v.get("risk"), v.get("cwe_id"), v.get("wasc_id"))
+        if key not in seen:
+            seen.add(key)
+            deduped.append(v)
+    websec["vulnerabilities"] = deduped
+    report["scanned_software"]["Web Security"] = websec
+
+    # Write out the cleaned report
     with open(REPORT_FILE, "w") as f:
         json.dump(report, f, indent=4)
     print(f"✅ PCI ASV scan report saved to {REPORT_FILE}")
@@ -145,50 +161,51 @@ _HTML_TEMPLATE = """
   <header>
     <h1>PCI DSS Executive Summary</h1>
   </header>
+
   <div class="metadata">
-    <div><strong>Scan Date:</strong> {{ scan["scan_metadata"]["date"] }}</div>
-    <div><strong>Target:</strong> {{ scan.get('TLS Scan', {}).get('target', 'N/A') }}</div>
+    <div><strong>Scan Date:</strong> {{ scan.scan_metadata.date }}</div>
+    <div><strong>Target:</strong> {{ scan['TLS Scan'].target or 'N/A' }}</div>
     <div><strong>Overall Status:</strong>
-      {% if scan["scan_metadata"]["pci_compliant"] %}✅ PASS{% else %}❌ FAIL{% endif %}
+      {% if scan.scan_metadata.pci_compliant %}✅ PASS{% else %}❌ FAIL{% endif %}
     </div>
   </div>
+
   <div class="section">
     <h2>Key Findings</h2>
     <div class="key-findings">
       <div class="box">
-        <strong>High & Medium CVEs:</strong>
-        {{ medium_high_count }} issues
+        <strong>High & Medium CVEs:</strong> {{ medium_high_count }} issues
       </div>
       <div class="box">
-        <strong>TLS Compliance:</strong>
-        {{ scan.get('TLS Scan', {}).get('pci_compliant', 'Unknown') }}
+        <strong>TLS Compliance:</strong> {{ scan['TLS Scan'].pci_compliant }}
       </div>
     </div>
   </div>
+
   <div class="section">
     <h2>Detected Software & Vulnerabilities</h2>
-    {% for sw, details in scan["scanned_software"].items() %}
+    {% for sw, details in scan.scanned_software.items() %}
       {% if sw not in ['scan_summary','TLS Scan','NSC Checks','Web Security','OS'] %}
-        <h3>{{ sw }} ({{ details.get("ports",[])|join(', ') }})</h3>
-        {% if details.get("cves") %}
+        <h3>{{ sw }} ({{ details.ports | join(', ') }})</h3>
+        {% if details.cves %}
           <table>
             <tr><th>CVE</th><th>CVSS</th><th>Severity</th><th>Description</th></tr>
-            {% for c in details.get("cves",[]) %}
+            {% for c in details.cves %}
             <tr>
-              <td>{{ c["cve_id"] }}</td>
-              <td>{{ c["cvss_score"] }}</td>
-              <td>{{ c["severity"] }}</td>
-              <td>{{ c["description"][:80] }}…</td>
+              <td>{{ c.cve_id }}</td>
+              <td>{{ c.cvss_score }}</td>
+              <td>{{ c.severity }}</td>
+              <td>{{ c.description[:80] }}…</td>
             </tr>
             {% endfor %}
           </table>
         {% else %}
           <p>No vulnerabilities found.</p>
         {% endif %}
-        {% if details.get("notes") %}
+        {% if details.notes %}
         <p><strong>Special Notes:</strong></p>
         <ul class="notes">
-          {% for note in details.get("notes",[]) %}
+          {% for note in details.notes %}
           <li>{{ note }}</li>
           {% endfor %}
         </ul>
@@ -196,58 +213,77 @@ _HTML_TEMPLATE = """
       {% endif %}
     {% endfor %}
   </div>
+
   <div class="section">
     <h2>TLS / SSL Findings</h2>
     <table>
-      <tr><th>Target</th><td>{{ scan["TLS Scan"]["target"] }}</td></tr>
-      <tr><th>Cipher</th><td>{{ scan["TLS Scan"]["cipher"] }}</td></tr>
-      <tr><th>TLS Version</th><td>{{ scan["TLS Scan"]["tls_version"] }}</td></tr>
-      <tr><th>Expiry</th><td>{{ scan["TLS Scan"]["certificate_expiry"] }}</td></tr>
-      <tr><th>Compliance</th><td>{{ scan["TLS Scan"]["pci_compliant"] }}</td></tr>
+      <tr><th>Target</th><td>{{ scan['TLS Scan'].target }}</td></tr>
+      <tr><th>Cipher</th><td>{{ scan['TLS Scan'].cipher }}</td></tr>
+      <tr><th>TLS Version</th><td>{{ scan['TLS Scan'].tls_version }}</td></tr>
+      <tr><th>Expiry</th><td>{{ scan['TLS Scan'].certificate_expiry }}</td></tr>
+      <tr><th>Compliance</th><td>{{ scan['TLS Scan'].pci_compliant }}</td></tr>
     </table>
   </div>
+
   <div class="section">
     <h2>Network Security Controls (NSC)</h2>
     <table>
-      <tr><th>DNS Zone Transfer</th><td>{{ scan['NSC Checks']["dns_zone_transfer"] }}</td></tr>
-      <tr><th>SMTP Relay</th><td>{{ scan['NSC Checks']["smtp_open_relay"] }}</td></tr>
-      <tr><th>ICMP Exposure</th><td>{{ scan['NSC Checks']["icmp_firewall_exposed"] }}</td></tr>
+      <tr><th>DNS Zone Transfer</th><td>{{ scan['NSC Checks'].dns_zone_transfer }}</td></tr>
+      <tr><th>SMTP Relay</th><td>{{ scan['NSC Checks'].smtp_open_relay }}</td></tr>
+      <tr><th>ICMP Exposure</th><td>{{ scan['NSC Checks'].icmp_firewall_exposed }}</td></tr>
     </table>
   </div>
+
   <div class="section">
     <h2>Web Application Findings</h2>
-    <p><strong>PCI Risk:</strong> {{ scan['Web Security']["risk_level"] }}</p>
-    <p><strong>Compliance:</strong> {{ scan['Web Security']["pci_compliant"] }}</p>
-    {% set zap_vulns = scan['Web Security']["vulnerabilities"] %}
-    {% if zap_vulns %}
+    <p><strong>PCI Risk:</strong> {{ scan['Web Security'].risk_level }}</p>
+    <p><strong>Compliance:</strong> {{ scan['Web Security'].pci_compliant }}</p>
+
+    {# filter out Informational and then dedupe by name #}
+    {% set raw = scan['Web Security'].vulnerabilities 
+       | rejectattr('risk','equalto','Informational') 
+       | list %}
+    {% set seen = [] %}
+    {% if raw %}
       <table>
         <tr><th>Risk</th><th>Name</th><th>Description</th><th>Solution</th></tr>
-        {% for v in zap_vulns %}
+        {% for v in raw %}
+          {% if v.name not in seen %}
+            {% set _ = seen.append(v.name) %}
         <tr>
-          <td>{{ v.risk }}</td><td>{{ v.name }}</td><td>{{ v.description[:60] }}…</td><td>{{ v.solution[:60] }}…</td>
+          <td>{{ v.risk }}</td>
+          <td>{{ v.name }}</td>
+          <td>{{ v.description[:60] }}…</td>
+          <td>{{ v.solution[:60] }}…</td>
         </tr>
+          {% endif %}
         {% endfor %}
       </table>
     {% else %}
-      <p>No ZAP vulnerabilities identified.</p>
+      <p>No active ZAP vulnerabilities identified.</p>
     {% endif %}
   </div>
-  {% if scan["scan_summary"].get("notes") %}
+
+  {% if scan.scan_summary.notes %}
   <div class="section">
     <h2>Scan Notes</h2>
     <ul class="notes">
-      {% for note in scan["scan_summary"]["notes"] %}
+      {% for note in scan.scan_summary.notes %}
       <li>{{ note }}</li>
       {% endfor %}
     </ul>
   </div>
   {% endif %}
+
   <footer>
-    Generated on {{ scan["scan_metadata"]["date"] }} by ASV Scanner
+    Generated on {{ scan.scan_metadata.date }} by ASV Scanner
   </footer>
 </body>
 </html>
 """
+
+
+
 
 def generate_pdf_report(scan: dict, filename: str = "executive_summary.pdf") -> None:
     """
